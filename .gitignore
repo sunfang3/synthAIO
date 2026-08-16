@@ -1,0 +1,9 @@
+.worktrees/
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+*.Rcheck/
+*.tar.gz
+inst/doc
+docs/plans/.Rhistory
