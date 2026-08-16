@@ -1,0 +1,6 @@
+^docs$
+^data-raw$
+^\.worktrees$
+^\.git$
+^\.gitignore$
+^LICENSE\.md$
