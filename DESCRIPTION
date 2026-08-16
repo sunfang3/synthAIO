@@ -11,6 +11,7 @@ Description: Estimates the Abadie-Diamond-Hainmueller synthetic control
 License: GPL-3
 Encoding: UTF-8
 Language: en-US
+LazyData: true
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 8.1.0
 Depends: R (>= 4.2.0)
