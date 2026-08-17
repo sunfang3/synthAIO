@@ -268,7 +268,8 @@ sc_spec <- function(formula,
       panel, unit, time, preds[[k]]$var, ids, pred_times
     )
   }
-  X1 <- X[, 1L]
+  # A 1-row X[, 1] drops to an unnamed scalar; keep predictor names.
+  X1 <- setNames(as.numeric(X[, 1L]), rownames(X))
   X0 <- X[, -1L, drop = FALSE]
 
   Y <- matrix(
@@ -282,7 +283,7 @@ sc_spec <- function(formula,
       panel, unit, time, outcome, ids[[j]], times
     )
   }
-  Y1 <- Y[, 1L]
+  Y1 <- setNames(as.numeric(Y[, 1L]), rownames(Y))
   Y0 <- Y[, -1L, drop = FALSE]
 
   X_all <- cbind(X0, X1)
