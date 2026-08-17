@@ -143,6 +143,48 @@ test_that("mixed args call in-time then in-space on the shifted spec", {
   expect_false(isTRUE(all.equal(mixed$placebo_space$table$ratio, orig_space$table$ratio)))
 })
 
+test_that("unit = c(2) runs only that donor as a placebo", {
+  spec <- jump_spec()
+  fit <- sc_fit(spec, method = "regression")
+  out <- synthaio:::sc_placebo_space(spec, fit, unit = 2)
+
+  expect_equal(sort(out$table$unit), c(1, 2))
+  expect_false(3 %in% out$table$unit)
+  expect_equal(out$p_unfiltered, sum(out$table$ratio >= out$table$ratio[1]) / 2)
+})
+
+test_that("unknown placebo unit id errors", {
+  spec <- jump_spec()
+  fit <- sc_fit(spec, method = "regression")
+  expect_error(
+    synthaio:::sc_placebo_space(spec, fit, unit = 99),
+    class = "synthaio_bad_placebo_unit"
+  )
+})
+
+test_that("in-time clips explicit mspeperiod and preperiod to times < t0", {
+  spec <- sc_spec(
+    y ~ x + y(3),
+    data = jump_panel(),
+    unit = "id",
+    time = "t",
+    treat = 1,
+    trperiod = 5,
+    xperiod = 1:4,
+    mspeperiod = 1:4,
+    preperiod = 1:4,
+    postperiod = 5:6
+  )
+  expect_equal(spec$mspe_times, 1:4)
+  expect_equal(spec$pre_times, 1:4)
+
+  out <- synthaio:::sc_placebo_time(spec, period = 4, method = "regression")
+  expect_equal(out$spec$mspe_times, 1:3)
+  expect_equal(out$spec$pre_times, 1:3)
+  expect_true(all(out$spec$post_times >= 4))
+  expect_false(any(out$spec$mspe_times >= 4))
+})
+
 test_that("in-time t0 drops y(t >= t0) and re-averages bare x on xperiod < t0", {
   xperiod <- 2:4
   t0 <- 4

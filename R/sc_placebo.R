@@ -104,12 +104,61 @@ sc_placebo_year_p <- function(effect, treat, kept, times) {
   )
 }
 
-#' In-space placebo: each donor as treated, remaining units as donors
+#' Keep a constructor window strictly before fake treatment time
+#'
+#' `NULL` stays `NULL` (sc_spec will default after `trperiod` shifts).
+#' An explicit window is clipped to times `< period`; an empty clip
+#' becomes `NULL` so the default (`< period`) applies.
+#' @noRd
+sc_placebo_clip_window <- function(times, period) {
+  if (is.null(times)) {
+    return(NULL)
+  }
+  kept <- times[times < period]
+  if (!length(kept)) {
+    return(NULL)
+  }
+  kept
+}
+
+#' Units to include in an in-space placebo loop
+#'
+#' `TRUE` is every donor plus the treated unit. A vector of ids is
+#' those donors plus the treated unit. Unknown ids error.
+#' @noRd
+sc_placebo_space_units <- function(spec, unit) {
+  if (isTRUE(unit)) {
+    return(c(spec$treat, spec$donors))
+  }
+  requested <- unique(unit)
+  requested <- requested[as.character(requested) != as.character(spec$treat)]
+  donor_chr <- as.character(spec$donors)
+  req_chr <- as.character(requested)
+  missing <- setdiff(req_chr, donor_chr)
+  if (length(missing)) {
+    synthaio_stop(
+      "synthaio_bad_placebo_unit",
+      "placebo unit(s) not in the donor pool: ",
+      paste(missing, collapse = ", ")
+    )
+  }
+  if (!length(requested)) {
+    synthaio_stop(
+      "synthaio_bad_placebo_unit",
+      "placebo unit= must be TRUE or at least one donor id"
+    )
+  }
+  donors_run <- spec$donors[donor_chr %in% req_chr]
+  c(spec$treat, donors_run)
+}
+
+#' In-space placebo: each (selected) donor as treated
 #'
 #' Locked Fisher p is `#{ratio >= ratio_tr} / N_units` including the
 #' treated unit (no mid-p, no `+1` in the denominator). `cut` drops
 #' placebos with pre MSPE `>` `cut` times the treated pre MSPE before
-#' filtered ranking and year-wise p.
+#' filtered ranking and year-wise p. `N_units` is the treated unit plus
+#' the donors that were actually run.
 #'
 #' Reserved mixed args: if `period` is set, run [sc_placebo_time()] first
 #' and then this in-space loop on the shifted spec.
@@ -117,7 +166,7 @@ sc_placebo_year_p <- function(effect, treat, kept, times) {
 #' @param spec An `sc_spec`.
 #' @param fit The original `scm_fit` (same method is reused).
 #' @param cut Pre-MSPE filter relative to the treated unit. Default `Inf`.
-#' @param unit Reserved mixed flag; `TRUE` (default) runs the donor loop.
+#' @param unit `TRUE` (all donors) or a vector of donor ids to run.
 #' @param period Reserved mixed fake treatment time, or `NULL`.
 #' @param ... Passed to [sc_fit()].
 #' @return List with tidy `table` (`unit`, `pre_mspe`, `post_mspe`,
@@ -148,7 +197,7 @@ sc_placebo_space <- function(spec,
     stop("`unit` is FALSE; nothing to do for in-space placebos.", call. = FALSE)
   }
 
-  units <- c(spec$treat, spec$donors)
+  units <- sc_placebo_space_units(spec, unit)
   n_units <- length(units)
   pre_mspe <- numeric(n_units)
   post_mspe <- numeric(n_units)
@@ -165,13 +214,15 @@ sc_placebo_space <- function(spec,
   ratio[[1L]] <- fit$mspe_ratio
   effect[, 1L] <- fit$effect[as.character(spec$times)]
 
-  pool <- units
+  # Donor pool for each placebo is the original treated + all original
+  # donors, minus the fake treated unit — not just the subset we loop.
+  pool <- c(spec$treat, spec$donors)
   for (i in seq.int(2L, n_units)) {
     j <- units[[i]]
     spec_j <- sc_rebuild_spec(
       spec,
       treat = j,
-      counit = pool[pool != j]
+      counit = pool[as.character(pool) != as.character(j)]
     )
     fit_j <- sc_placebo_fit(spec_j, fit, ...)
     pre_mspe[[i]] <- fit_j$pre_mspe
@@ -225,7 +276,9 @@ sc_placebo_space <- function(spec,
 #' In-time placebo: fake treatment at `period` < `trperiod`
 #'
 #' Point predictors with time `>= period` are dropped. Bare covariates
-#' are re-averaged on `xperiod` times strictly before `period`. If no
+#' are re-averaged on `xperiod` times strictly before `period`. Explicit
+#' `mspeperiod` / `preperiod` are clipped the same way. `postperiod` is
+#' cleared so the shifted fit defaults to times `>= period`. If no
 #' predictors remain, errors with `synthaio_no_predictors`.
 #'
 #' @param spec An `sc_spec`.
@@ -270,7 +323,10 @@ sc_placebo_time <- function(spec, period, ...) {
     spec,
     formula = formula,
     trperiod = period,
-    xperiod = xperiod
+    xperiod = xperiod,
+    mspeperiod = sc_placebo_clip_window(spec$mspeperiod, period),
+    preperiod = sc_placebo_clip_window(spec$preperiod, period),
+    postperiod = NULL
   )
   new_fit <- sc_fit(new_spec, ...)
 
@@ -313,7 +369,9 @@ sc_placebo <- function(spec, fit, unit = FALSE, period = NULL, cut = Inf, ...) {
   }
   space_res <- NULL
   if (!identical(unit, FALSE) && !is.null(unit)) {
-    space_res <- sc_placebo_space(space_spec, space_fit, cut = cut, ...)
+    space_res <- sc_placebo_space(
+      space_spec, space_fit, cut = cut, unit = unit, ...
+    )
   }
   list(placebo_time = time_res, placebo_space = space_res)
 }

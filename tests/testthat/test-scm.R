@@ -68,6 +68,15 @@ test_that("loo=TRUE on a tiny toy attaches $loo", {
   expect_true(length(fit$loo$fits) >= 1L)
 })
 
+test_that("placebo unit ids are passed through scm()", {
+  fit <- scm_toy_call(placebo = list(unit = 2))
+
+  expect_false(is.null(fit$placebo_space))
+  expect_equal(sort(fit$placebo_space$table$unit), c(1, 2))
+  expect_false(3 %in% fit$placebo_space$table$unit)
+  expect_false(4 %in% fit$placebo_space$table$unit)
+})
+
 test_that("placebo=list() is treated as no placebo", {
   fit <- scm_toy_call(placebo = list())
 
