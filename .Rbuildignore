@@ -2,5 +2,6 @@
 ^data-raw$
 ^\.worktrees$
 ^\.git$
+^\.github$
 ^\.gitignore$
 ^LICENSE\.md$

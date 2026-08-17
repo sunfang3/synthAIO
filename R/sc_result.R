@@ -46,8 +46,9 @@ print.scm_fit <- function(x, ...) {
 #' Summarize an `scm_fit`
 #'
 #' Prints the `print()` header plus the predictor balance table and
-#' nonzero donor weights. If an in-space placebo is attached, also
-#' prints the MSPE table and Fisher p-values. Without a placebo,
+#' nonzero donor weights. Attached diagnostics are printed when present:
+#' in-space MSPE / Fisher p-values, in-time fake-window and real-post
+#' gaps, and the leave-one-out effect band. Without an in-space placebo,
 #' p-values are not mentioned. Does not recompute estimates.
 #'
 #' @param object An `scm_fit`.
@@ -90,6 +91,42 @@ summary.scm_fit <- function(object, ...) {
         sep = ""
       )
     }
+  }
+
+  ptime <- object$placebo_time
+  if (!is.null(ptime)) {
+    cat("\nIn-time placebo (fake treatment at ", ptime$period, ")\n", sep = "")
+    if (length(ptime$effect_fake)) {
+      cat("Fake-window gaps\n")
+      print(
+        data.frame(
+          time = as.numeric(names(ptime$effect_fake)),
+          effect = as.numeric(ptime$effect_fake),
+          row.names = NULL
+        ),
+        row.names = FALSE
+      )
+    }
+    if (length(ptime$effect_post)) {
+      cat("Real post-window gaps (new weights)\n")
+      print(
+        data.frame(
+          time = as.numeric(names(ptime$effect_post)),
+          effect = as.numeric(ptime$effect_post),
+          row.names = NULL
+        ),
+        row.names = FALSE
+      )
+    }
+  }
+
+  loo <- object$loo
+  if (!is.null(loo) && !is.null(loo$band)) {
+    cat("\nLeave-one-out\n")
+    if (length(loo$fits)) {
+      cat("Dropped donors: ", paste(names(loo$fits), collapse = ", "), "\n", sep = "")
+    }
+    print(loo$band, row.names = FALSE)
   }
 
   invisible(object)

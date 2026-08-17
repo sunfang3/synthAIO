@@ -33,6 +33,54 @@ test_that("print/summary return object invisibly and emit RMSE", {
   expect_true(any(grepl("RMSE", summary_out, fixed = TRUE)))
 })
 
+scm_result_toy <- function(...) {
+  do.call(
+    scm,
+    c(
+      list(
+        formula = y ~ x + y(4),
+        data = data.frame(
+          id = rep(1:4, each = 6L),
+          t = rep(1:6, 4L),
+          y = c(
+            10, 11, 12, 13, 30, 31,
+            11, 12, 13, 14, 15, 16,
+            9, 10, 11, 12, 13, 14,
+            10.5, 11.5, 12.5, 13.5, 14.5, 15.5
+          ),
+          x = c(
+            1, 1, 1, 1, 1, 1,
+            1.1, 1.1, 1.1, 1.1, 1.1, 1.1,
+            0.9, 0.9, 0.9, 0.9, 0.9, 0.9,
+            1.05, 1.05, 1.05, 1.05, 1.05, 1.05
+          )
+        ),
+        unit = "id",
+        time = "t",
+        treat = 1,
+        trperiod = 5,
+        xperiod = 1:4
+      ),
+      list(...)
+    )
+  )
+}
+
+test_that("summary prints in-time placebo when attached", {
+  fit <- scm_result_toy(placebo = list(period = 4))
+  out <- capture.output(summary(fit))
+  expect_true(any(grepl("In-time placebo", out, fixed = TRUE)))
+  expect_true(any(grepl("4", out)))
+  expect_false(any(grepl("p-value", out, ignore.case = TRUE)))
+})
+
+test_that("summary prints leave-one-out when attached", {
+  fit <- scm_result_toy(loo = TRUE)
+  out <- capture.output(summary(fit))
+  expect_true(any(grepl("Leave-one-out", out, fixed = TRUE)))
+  expect_true(any(grepl("loo_min", out, fixed = TRUE)))
+})
+
 test_that("summary without placebo does not mention p-values", {
   fit <- smoking_regression_fit()
   expect_null(fit$placebo_space)

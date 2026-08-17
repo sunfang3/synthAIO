@@ -16,7 +16,8 @@
 }
 \description{
 Prints the \code{print()} header plus the predictor balance table and
-nonzero donor weights. If an in-space placebo is attached, also
-prints the MSPE table and Fisher p-values. Without a placebo,
+nonzero donor weights. Attached diagnostics are printed when present:
+in-space MSPE / Fisher p-values, in-time fake-window and real-post
+gaps, and the leave-one-out effect band. Without an in-space placebo,
 p-values are not mentioned. Does not recompute estimates.
 }
