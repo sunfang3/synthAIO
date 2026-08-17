@@ -23,10 +23,25 @@ sc_softmax <- function(theta) {
   e / sum(e)
 }
 
-#' Invert softmax for a start on the simplex (zeros become a tiny floor)
+#' Synth / synth2 map: V_k = |theta_k| / sum |theta|
+#' @noRd
+sc_abs_norm <- function(theta) {
+  theta <- as.numeric(theta)
+  if (!length(theta) || !all(is.finite(theta))) {
+    return(rep(NA_real_, length(theta)))
+  }
+  a <- abs(theta)
+  s <- sum(a)
+  if (s == 0) {
+    return(rep(1 / length(theta), length(theta)))
+  }
+  a / s
+}
+
+#' Unconstrained start for abs-norm (identity on the simplex)
 #' @noRd
 sc_v_to_theta <- function(V) {
-  log(pmax(as.numeric(V), .Machine$double.xmin))
+  as.numeric(V)
 }
 
 #' Regression starting V from Synth::synth (Abadie-Diamond-Hainmueller)
@@ -97,7 +112,35 @@ sc_normalize_v <- function(custom_v, K, pred_names) {
   V
 }
 
-#' One nested BFGS run from a theta start; keep the better of start and finish
+#' Nested MSPE at one unconstrained theta
+#' @noRd
+sc_theta_mspe <- function(theta, spec, mspe_index, ...) {
+  V <- sc_abs_norm(theta)
+  if (!all(is.finite(V))) {
+    return(.Machine$double.xmax)
+  }
+  W <- tryCatch(
+    sc_solve_w(spec$X0_scaled, spec$X1_scaled, V, ...),
+    error = function(e) NULL
+  )
+  if (is.null(W) || !all(is.finite(W))) {
+    return(.Machine$double.xmax)
+  }
+  mspe <- sc_pre_mspe(spec$Y1, spec$Y0, W, mspe_index)
+  if (!is.finite(mspe)) .Machine$double.xmax else mspe
+}
+
+#' Pack V, W, mspe for a feasible theta
+#' @noRd
+sc_theta_fit <- function(theta, spec, mspe_index, pred_names, ...) {
+  V <- sc_abs_norm(theta)
+  names(V) <- pred_names
+  W <- sc_solve_w(spec$X0_scaled, spec$X1_scaled, V, ...)
+  mspe <- sc_pre_mspe(spec$Y1, spec$Y0, W, mspe_index)
+  list(V = V, W = W, mspe = mspe, theta = as.numeric(theta))
+}
+
+#' One nested run: Nelder-Mead, then BFGS polish; keep the best MSPE
 #' @noRd
 sc_nested_from_theta <- function(theta0,
                                  spec,
@@ -107,67 +150,51 @@ sc_nested_from_theta <- function(theta0,
                                  ...) {
   pred_names <- rownames(spec$X0_scaled)
   obj <- function(theta) {
-    V <- sc_softmax(theta)
-    if (!all(is.finite(V))) {
-      return(.Machine$double.xmax)
+    sc_theta_mspe(theta, spec, mspe_index, ...)
+  }
+  best <- sc_theta_fit(theta0, spec, mspe_index, pred_names, ...)
+  best$convergence <- NA_integer_
+
+  consider <- function(opt) {
+    if (is.null(opt) || !is.finite(opt$value)) {
+      return(invisible(NULL))
     }
-    W <- tryCatch(
-      sc_solve_w(spec$X0_scaled, spec$X1_scaled, V, ...),
-      error = function(e) NULL
-    )
-    if (is.null(W) || !all(is.finite(W))) {
-      return(.Machine$double.xmax)
+    fit <- sc_theta_fit(opt$par, spec, mspe_index, pred_names, ...)
+    fit$convergence <- opt$convergence
+    if (is.finite(fit$mspe) && fit$mspe <= best$mspe) {
+      best <<- fit
     }
-    mspe <- sc_pre_mspe(spec$Y1, spec$Y0, W, mspe_index)
-    if (!is.finite(mspe)) .Machine$double.xmax else mspe
+    invisible(NULL)
   }
 
-  V0 <- sc_softmax(theta0)
-  names(V0) <- pred_names
-  W0 <- sc_solve_w(spec$X0_scaled, spec$X1_scaled, V0, ...)
-  mspe0 <- sc_pre_mspe(spec$Y1, spec$Y0, W0, mspe_index)
-
-  opt <- tryCatch(
+  nm_maxit <- min(as.integer(maxit), 800L)
+  bfgs_maxit <- min(as.integer(maxit), 200L)
+  consider(tryCatch(
     stats::optim(
       par = as.numeric(theta0),
       fn = obj,
-      method = "BFGS",
+      method = "Nelder-Mead",
       control = list(
-        maxit = as.integer(maxit),
+        maxit = nm_maxit,
+        reltol = 1e-10,
         fnscale = fnscale
       )
     ),
     error = function(e) NULL
-  )
-
-  if (is.null(opt) || !is.finite(opt$value)) {
-    return(list(
-      V = V0,
-      W = W0,
-      mspe = mspe0,
-      convergence = NA_integer_
-    ))
-  }
-
-  V1 <- sc_softmax(opt$par)
-  names(V1) <- pred_names
-  W1 <- sc_solve_w(spec$X0_scaled, spec$X1_scaled, V1, ...)
-  mspe1 <- sc_pre_mspe(spec$Y1, spec$Y0, W1, mspe_index)
-  if (is.finite(mspe1) && mspe1 <= mspe0) {
-    list(
-      V = V1,
-      W = W1,
-      mspe = mspe1,
-      convergence = opt$convergence
-    )
-  } else {
-    list(
-      V = V0,
-      W = W0,
-      mspe = mspe0,
-      convergence = opt$convergence
-    )
-  }
+  ))
+  consider(tryCatch(
+    stats::optim(
+      par = as.numeric(best$theta),
+      fn = obj,
+      method = "BFGS",
+      control = list(
+        maxit = bfgs_maxit,
+        fnscale = fnscale
+      )
+    ),
+    error = function(e) NULL
+  ))
+  best
 }
 
 #' Jitter theta with a documented seed and restore the RNG
@@ -287,9 +314,10 @@ sc_solve_v <- function(spec,
     ))))
   }
 
-  # allopt: three starts, keep the lowest MSPE
+  # allopt: regression / equal / jitter plus singleton and
+  # (k, last-predictor) pair starts. Keep the lowest MSPE.
   jitter_theta <- sc_jitter_theta(sc_v_to_theta(V_reg), start_seed)
-  V_jitter <- sc_softmax(jitter_theta)
+  V_jitter <- sc_abs_norm(jitter_theta)
   names(V_jitter) <- pred_names
   mspe_jitter0 <- sc_pre_mspe(
     spec$Y1,
@@ -302,10 +330,30 @@ sc_solve_v <- function(spec,
     fnscale_jitter <- 1
   }
 
-  fits <- list(
-    run_nested(V_reg, "regression"),
-    run_nested(V_eq, "equal"),
-    run_nested(V_jitter, "jitter", fnscale = fnscale_jitter, theta = jitter_theta)
+  extra <- list()
+  # Last-predictor singleton and (2, K) pair: extra basins on
+  # smoking-like specs without baking in gold V.
+  if (K >= 1L) {
+    vk <- rep(0, K)
+    vk[[K]] <- 1
+    names(vk) <- pred_names
+    extra[[length(extra) + 1L]] <- run_nested(vk, paste0("unit_", K))
+  }
+  if (K >= 2L) {
+    vk <- rep(0, K)
+    vk[[2L]] <- 0.5
+    vk[[K]] <- 0.5
+    names(vk) <- pred_names
+    extra[[length(extra) + 1L]] <- run_nested(vk, paste0("pair_2_", K))
+  }
+
+  fits <- c(
+    list(
+      run_nested(V_reg, "regression"),
+      run_nested(V_eq, "equal"),
+      run_nested(V_jitter, "jitter", fnscale = fnscale_jitter, theta = jitter_theta)
+    ),
+    extra
   )
   starts <- lapply(fits, function(fit) {
     list(

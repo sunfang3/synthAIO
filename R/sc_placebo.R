@@ -89,7 +89,7 @@ sc_placebo_fit <- function(spec, fit, ...) {
 #' @noRd
 sc_placebo_year_p <- function(effect, treat, kept, times) {
   time_names <- as.character(times)
-  na_p <- setNames(rep(NA_real_, length(times)), time_names)
+  na_p <- stats::setNames(rep(NA_real_, length(times)), time_names)
   units <- colnames(effect)
   treat_name <- as.character(treat)
   keep_names <- units[kept]
@@ -99,8 +99,8 @@ sc_placebo_year_p <- function(effect, treat, kept, times) {
   E <- effect[, keep_names, drop = FALSE]
   e_tr <- E[, treat_name]
   list(
-    p_left = setNames(rowMeans(E <= e_tr), time_names),
-    p_two = setNames(rowMeans(abs(E) >= abs(e_tr)), time_names)
+    p_left = stats::setNames(rowMeans(E <= e_tr), time_names),
+    p_two = stats::setNames(rowMeans(abs(E) >= abs(e_tr)), time_names)
   )
 }
 

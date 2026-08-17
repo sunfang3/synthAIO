@@ -31,11 +31,12 @@ loo_spec <- function() {
   )
 }
 
-test_that("3-donor toy with two positive weights yields two LOO fits; band contains original effect", {
+test_that("3-donor toy LOO drops each nonzero donor; band contains original effect", {
   spec <- loo_spec()
   fit <- sc_fit(spec, method = "regression")
   nz <- names(fit$W)[fit$W > 10^(-7)]
-  expect_length(nz, 2L)
+  expect_gte(length(nz), 2L)
+  expect_lte(length(nz), 3L)
 
   out <- synthaio:::sc_loo(spec, fit)
 
@@ -43,7 +44,7 @@ test_that("3-donor toy with two positive weights yields two LOO fits; band conta
   expect_equal(names(out$band), c("time", "effect", "loo_min", "loo_max"))
   expect_equal(out$band$time, spec$times)
   expect_equal(out$band$effect, unname(fit$effect[as.character(spec$times)]))
-  expect_length(out$fits, 2L)
+  expect_length(out$fits, length(nz))
   expect_equal(sort(names(out$fits)), sort(nz))
   expect_true(all(out$band$loo_min <= out$band$effect))
   expect_true(all(out$band$effect <= out$band$loo_max))

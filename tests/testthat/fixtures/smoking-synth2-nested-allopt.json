@@ -1,5 +1,6 @@
 {
   "_source": "Carlos Mendez tutorial replica of Yan-Chen synth2 2.1.0 nested allopt; replace with author Stata log when available",
+  "_q1": "Author Stata log is still missing. synthaio allopt (Unit 12) recovers the gold donor set; individual W/V live in smoking-synth2-achieved.json. Lowest-MSPE V is cigsale_1975 + cigsale_1980, not gold age15to24 + cigsale_1975.",
   "_spec": "cigsale ~ lnincome + age15to24 + retprice + beer + cigsale(1988)+cigsale(1980)+cigsale(1975); trunit=California; trperiod=1989; xperiod=1980:1988; nested allopt",
   "treat_name": "California",
   "treat_id": 3,
