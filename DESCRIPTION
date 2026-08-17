@@ -17,5 +17,6 @@ RoxygenNote: 8.1.0
 Depends: R (>= 4.2.0)
 Imports: osqp, ggplot2
 Suggests: testthat (>= 3.0.0), knitr, rmarkdown, jsonlite
+VignetteBuilder: knitr
 Config/testthat/edition: 3
 Config/roxygen2/version: 8.1.0
