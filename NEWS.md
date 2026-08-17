@@ -9,6 +9,8 @@
 
 ## User-facing
 
+* README has a Chinese section for `synth2` / 连享会 readers.
+
 * `treat = "California"` works when `state_name` is on the panel.
 * `print()` / `summary()` show `California (3)` and `Utah (34)`.
 * `summary()` prints in-time placebo gaps and the leave-one-out band.
