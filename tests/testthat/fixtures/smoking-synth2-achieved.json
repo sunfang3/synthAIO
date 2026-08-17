@@ -1,5 +1,5 @@
 {
-  "_source": "synthaio allopt on this machine (ipop inner + NM/BFGS abs-norm V); Stata log still missing (Q1)",
+  "_source": "synthaio default allopt basin (ipop + NM/BFGS). Author Stata log is data-raw/synth2_smoking_allopt.log; gold V/W live in smoking-synth2-nested-allopt.json. Default allopt may land here instead.",
   "_spec": "cigsale ~ lnincome + age15to24 + retprice + beer + cigsale(1988)+cigsale(1980)+cigsale(1975); trunit=California; trperiod=1989; xperiod=1980:1988; nested allopt",
   "treat_name": "California",
   "treat_id": 3,

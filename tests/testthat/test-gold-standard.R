@@ -42,14 +42,35 @@ test_that("selected years' effects are within 0.15 packs", {
   }
 })
 
-test_that("V top-2 and weights lock to the achieved basin", {
-  achieved <- gold_smoking_achieved()
+test_that("Stata V recovers Stata W through the inner QP", {
+  gold <- gold_smoking()
+  spec <- sc_spec(
+    cigsale ~ lnincome + age15to24 + retprice + beer +
+      cigsale(1988) + cigsale(1980) + cigsale(1975),
+    data = smoking, unit = "state", time = "year",
+    treat = gold$treat_id, trperiod = 1989,
+    xperiod = 1980:1988
+  )
+  v <- unlist(gold$v[rownames(spec$X0_scaled)])
+  out <- synthaio:::sc_solve_v(spec, method = "custom", custom_v = v)
+  for (nm in names(gold$w_nonzero)) {
+    id <- as.character(gold$unit_ids[[nm]])
+    expect_lt(
+      abs(out$W[[id]] - gold$w_nonzero[[nm]]),
+      gold$tol$w_abs + 1e-12,
+      label = nm
+    )
+  }
+  expect_identical(
+    sort(gold_id_to_name(gold, names(out$W)[out$W > gold$tol$w_abs])),
+    sort(names(gold$w_nonzero))
+  )
+})
+
+test_that("V top-2 matches the Stata nested-allopt basin", {
+  gold <- gold_smoking()
   fit <- gold_smoking_fit()
   got_top <- names(sort(fit$V, decreasing = TRUE))[1:2]
-  expect_identical(sort(got_top), sort(achieved$v_top2))
-  # Gold V (age15to24 + cigsale_1975) is a different local min.
-  expect_identical(sort(achieved$gold_v_top2), c("age15to24", "cigsale_1975"))
-  for (nm in names(achieved$v)) {
-    expect_equal(unname(fit$V[[nm]]), achieved$v[[nm]], tolerance = 1e-4)
-  }
+  gold_top <- names(sort(unlist(gold$v), decreasing = TRUE))[1:2]
+  expect_identical(sort(got_top), sort(gold_top))
 })

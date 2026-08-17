@@ -96,12 +96,12 @@ data.frame(
 `r paste(sprintf("%s (%.3f)", nz_labs, as.numeric(nz)), collapse = "，")`。
 这个**捐赠集合**与 Stata `synth2, nested allopt` 一致（犹他、内华达、蒙大拿、科罗拉多、康涅狄格）。
 
-\(V\) 权重不必和 Stata 逐位相同。这次拟合最大的两项是
+这次拟合最大的两项是
 `r names(v_ord)[1]`（`r sprintf("%.3f", v_ord[[1]])`）和
-`r names(v_ord)[2]`（`r sprintf("%.3f", v_ord[[2]])`）。已发表的
-`synth2, nested allopt` 复现通常把质量集中在 `age15to24` 与
-`cigsale(1975)`——同一嵌套 MSPE 曲面上的另一个局部最小。不要把 \(V\)
-是否逐位重合当成对错标准；锁定的捐赠集合以及 RMSE / ATT 容差见
+`r names(v_ord)[2]`（`r sprintf("%.3f", v_ord[[2]])`）。
+这两个名字与本面板上 Stata `synth2` 2.1.0 `nested allopt`
+（`data-raw/synth2_smoking_allopt.log`）一致。单个 \(V\) 分量不必逐位相同。
+锁定的捐赠集合、RMSE、ATT，以及「把 Stata \(V\) 喂给内层 QP 能否收回 \(W\)」见
 `tests/testthat/test-gold-standard.R`。
 
 ## 路径图与效应图

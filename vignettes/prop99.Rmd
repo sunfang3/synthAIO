@@ -111,14 +111,13 @@ This fit uses `r length(nz)` donors:
 That donor *set* is the same five states recovered by Stata
 `synth2, nested allopt` (Utah, Nevada, Montana, Colorado, Connecticut).
 
-Predictor weights \(V\) need not match Stata digit-for-digit. This run puts
-the most mass on `r names(v_ord)[1]` (`r sprintf("%.3f", v_ord[[1]])`) and
-`r names(v_ord)[2]` (`r sprintf("%.3f", v_ord[[2]])`). Published
-`synth2, nested allopt` replicas typically concentrate on `age15to24` and
-`cigsale(1975)` — a different local minimum of the same nested MSPE surface.
-Do not treat an exact \(V\) match as a correctness check; the locked donor
-set and RMSE / ATT tolerances live in
-`tests/testthat/test-gold-standard.R`.
+This run puts the most mass on `r names(v_ord)[1]`
+(`r sprintf("%.3f", v_ord[[1]])`) and `r names(v_ord)[2]`
+(`r sprintf("%.3f", v_ord[[2]])`). Those two names match Stata
+`synth2` 2.1.0 `nested allopt` on this panel
+(`data-raw/synth2_smoking_allopt.log`). Individual \(V\) entries need not
+match digit-for-digit. Locked donor set, RMSE, ATT, and the Stata-\(V\)
+inner-QP check live in `tests/testthat/test-gold-standard.R`.
 
 ## Paths and gaps
 

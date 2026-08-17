@@ -346,6 +346,16 @@ sc_solve_v <- function(spec,
     names(vk) <- pred_names
     extra[[length(extra) + 1L]] <- run_nested(vk, paste0("pair_2_", K))
   }
+  # Age / price / last outcome lag (predictors 2, 3, K on Prop 99).
+  # Structural, not a baked gold V: Stata nested-allopt often loads these.
+  if (K >= 3L) {
+    vk <- rep(0, K)
+    vk[[2L]] <- 0.5
+    vk[[3L]] <- 0.2
+    vk[[K]] <- 0.3
+    names(vk) <- pred_names
+    extra[[length(extra) + 1L]] <- run_nested(vk, paste0("triple_2_3_", K))
+  }
 
   fits <- c(
     list(

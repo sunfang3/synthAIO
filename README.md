@@ -24,10 +24,11 @@ From a local checkout:
 remotes::install_local("path/to/synthaio")
 ```
 
-From GitHub (placeholder — replace `OWNER` when the public repo exists):
+From GitHub:
 
 ```r
-# remotes::install_github("OWNER/synthaio")
+# install.packages("remotes")
+remotes::install_github("sunfang3/synthAIO")
 ```
 
 ## Example
@@ -48,9 +49,11 @@ coef(fit)[coef(fit) > 0]
 ```
 
 California is unit `3`. `allopt = TRUE` is multi-start nested optimization.
-The donor *set* matches published `synth2, nested allopt` replicas; \(V\)
-may land in a different local minimum. See the vignettes for the full walk
-through, and `tests/testthat/test-gold-standard.R` for locked tolerances.
+Donor set, ATT, RMSE, and the two largest \(V\) names match Stata
+`synth2` 2.1.0 `nested allopt` on this panel
+(`data-raw/synth2_smoking_allopt.log`). Passing the Stata \(V\) as
+`custom_v` recovers the Stata \(W\) to `tol$w_abs`. See the vignettes
+and `tests/testthat/test-gold-standard.R`.
 
 ```r
 browseVignettes("synthaio")

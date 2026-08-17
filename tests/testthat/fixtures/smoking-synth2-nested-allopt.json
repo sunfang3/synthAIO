@@ -1,6 +1,5 @@
 {
-  "_source": "Carlos Mendez tutorial replica of Yan-Chen synth2 2.1.0 nested allopt; replace with author Stata log when available",
-  "_q1": "Author Stata log is still missing. synthaio allopt (Unit 12) recovers the gold donor set; individual W/V live in smoking-synth2-achieved.json. Lowest-MSPE V is cigsale_1975 + cigsale_1980, not gold age15to24 + cigsale_1975.",
+  "_source": "Author Stata log data-raw/synth2_smoking_allopt.log; synth2 2.1.0 (Yan-Chen 2023-10-05) + synth 0.0.8; smoking.csv; nested allopt; 2026-08-17",
   "_spec": "cigsale ~ lnincome + age15to24 + retprice + beer + cigsale(1988)+cigsale(1980)+cigsale(1975); trunit=California; trperiod=1989; xperiod=1980:1988; nested allopt",
   "treat_name": "California",
   "treat_id": 3,
@@ -11,35 +10,35 @@
     "Colorado": 4,
     "Connecticut": 5
   },
-  "rmse": 1.75567,
-  "r2": 0.97434,
-  "att": -19.0018,
+  "rmse": 1.754243879718698,
+  "r2": 0.9742460262473978,
+  "att": -18.96883360544841,
   "v": {
-    "lnincome": 0.0,
-    "age15to24": 0.5459,
-    "retprice": 0.0174,
-    "beer": 0.0031,
-    "cigsale_1988": 0.0049,
-    "cigsale_1980": 0.0066,
-    "cigsale_1975": 0.4221
+    "lnincome": 0.00000733,
+    "age15to24": 0.53577295,
+    "retprice": 0.21566272,
+    "beer": 0.00048796,
+    "cigsale_1988": 0.00082711,
+    "cigsale_1980": 0.00006683,
+    "cigsale_1975": 0.24717511
   },
   "w_nonzero": {
-    "Utah": 0.3340,
-    "Nevada": 0.2350,
-    "Montana": 0.2020,
-    "Colorado": 0.1610,
-    "Connecticut": 0.0680
+    "Utah": 0.335,
+    "Nevada": 0.235,
+    "Montana": 0.202,
+    "Colorado": 0.16,
+    "Connecticut": 0.068
   },
   "effect": {
-    "1989": -7.5945,
-    "1990": -9.7039,
-    "1993": -17.7897,
-    "1997": -23.9123,
-    "1999": -26.3711,
-    "2000": -25.7550
+    "1989": -7.5627,
+    "1990": -9.6699,
+    "1993": -17.7573,
+    "1997": -23.888,
+    "1999": -26.3354,
+    "2000": -25.7227
   },
   "mspe_placebo_nested_sigf6": {
-    "_note": "From the *placebo* run (nested, no allopt, sigf=6), NOT the allopt baseline. When windows coincide, allopt pre_mspe should be ≈ rmse^2 ≈ 3.082, not 3.1668. Unit 12 must not retune the solver to match this block.",
+    "_note": "From a *placebo* run (nested, no allopt, sigf=6) in teaching replicas, NOT this allopt baseline. Do not retune the solver to match this block.",
     "pre": 3.1668,
     "post": 391.2533,
     "ratio": 123.5490
