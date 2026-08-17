@@ -2,3 +2,4 @@
 
 export(sc_fit)
 export(sc_spec)
+export(scm)
