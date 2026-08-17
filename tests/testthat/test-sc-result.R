@@ -26,11 +26,13 @@ test_that("print/summary return object invisibly and emit RMSE", {
   expect_identical(printed, fit)
   print_out <- capture.output(print(fit))
   expect_true(any(grepl("RMSE", print_out, fixed = TRUE)))
+  expect_true(any(grepl("California \\(3\\)", print_out)))
 
   summarised <- expect_invisible(summary(fit))
   expect_identical(summarised, fit)
   summary_out <- capture.output(summary(fit))
   expect_true(any(grepl("RMSE", summary_out, fixed = TRUE)))
+  expect_true(any(grepl("Utah \\(34\\)", summary_out)))
 })
 
 scm_result_toy <- function(...) {

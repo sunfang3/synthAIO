@@ -8,16 +8,6 @@ gold_smoking <- function(path = NULL) {
   jsonlite::fromJSON(path)
 }
 
-gold_smoking_achieved <- function(path = NULL) {
-  if (is.null(path)) {
-    path <- testthat::test_path("fixtures/smoking-synth2-achieved.json")
-  }
-  if (!file.exists(path)) {
-    stop("achieved fixture not found: ", path, call. = FALSE)
-  }
-  jsonlite::fromJSON(path)
-}
-
 .gold_fit_cache <- new.env(parent = emptyenv())
 
 gold_smoking_fit <- function() {

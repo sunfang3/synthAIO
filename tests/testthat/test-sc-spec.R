@@ -1,6 +1,21 @@
 prop99_formula <- cigsale ~ lnincome + age15to24 + retprice + beer +
   cigsale(1988) + cigsale(1980) + cigsale(1975)
 
+test_that("treat = 'California' resolves via state_name", {
+  spec <- sc_spec(
+    formula = prop99_formula,
+    data = smoking,
+    unit = "state",
+    time = "year",
+    treat = "California",
+    trperiod = 1989,
+    xperiod = 1980:1988
+  )
+  expect_equal(spec$treat, 3)
+  expect_equal(sc_format_unit(spec, 3), "California (3)")
+  expect_equal(sc_format_unit(spec, c(3, 34)), c("California (3)", "Utah (34)"))
+})
+
 test_that("smoking Prop 99 spec has K=7, J=38, cigsale_1988 ≈ 90.1", {
   spec <- sc_spec(
     formula = prop99_formula,

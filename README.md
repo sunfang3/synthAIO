@@ -40,7 +40,7 @@ fit <- scm(
   cigsale ~ lnincome + age15to24 + retprice + beer +
     cigsale(1988) + cigsale(1980) + cigsale(1975),
   data = smoking, unit = "state", time = "year",
-  treat = 3, trperiod = 1989, xperiod = 1980:1988,
+  treat = "California", trperiod = 1989, xperiod = 1980:1988,
   allopt = TRUE
 )
 print(fit)
@@ -48,7 +48,7 @@ balance(fit)
 coef(fit)[coef(fit) > 0]
 ```
 
-California is unit `3`. `allopt = TRUE` is multi-start nested optimization.
+`treat` may be `3` or `"California"`. `allopt = TRUE` is multi-start nested optimization.
 Donor set, ATT, RMSE, and the two largest \(V\) names match Stata
 `synth2` 2.1.0 `nested allopt` on this panel
 (`data-raw/synth2_smoking_allopt.log`). Passing the Stata \(V\) as

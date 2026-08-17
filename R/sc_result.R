@@ -33,7 +33,7 @@ sc_result_nonzero_w <- function(W) {
 #' @export
 print.scm_fit <- function(x, ...) {
   cat("Synthetic control\n")
-  cat("  Treated:    ", x$spec$treat, "\n", sep = "")
+  cat("  Treated:    ", sc_format_unit(x$spec, x$spec$treat), "\n", sep = "")
   cat("  Time:       ", x$spec$trperiod, "\n", sep = "")
   cat("  Method:     ", x$method, "\n", sep = "")
   cat("  RMSE:       ", format(x$rmse, digits = 4), "\n", sep = "")
@@ -66,6 +66,7 @@ summary.scm_fit <- function(object, ...) {
   if (!nrow(wtab)) {
     cat("(none)\n")
   } else {
+    wtab$unit <- sc_format_unit(object$spec, wtab$unit)
     print(wtab, row.names = FALSE)
   }
 
@@ -186,9 +187,15 @@ balance <- function(x, ...) {
 
 #' @export
 #' @rdname scm_fit-extractors
-effects <- function(x, ...) {
+sc_effects <- function(x, ...) {
   sc_result_require(x)
   x$effect
+}
+
+#' @export
+#' @rdname scm_fit-extractors
+effects <- function(x, ...) {
+  sc_effects(x, ...)
 }
 
 #' @export

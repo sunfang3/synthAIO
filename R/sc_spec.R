@@ -7,6 +7,62 @@ synthaio_stop <- function(class, ...) {
   stop(errorCondition(paste0(...), class = class))
 }
 
+#' Optional `{unit}_name` column next to a numeric unit id
+#' @noRd
+sc_spec_name_col <- function(unit) {
+  paste0(unit, "_name")
+}
+
+#' Map a character treat name to the unit id via `{unit}_name`
+#' @noRd
+sc_spec_resolve_treat <- function(treat, data, unit) {
+  present <- unique(data[[unit]])
+  if (length(treat) == 1L && treat %in% present) {
+    return(treat)
+  }
+  name_col <- sc_spec_name_col(unit)
+  if (name_col %in% names(data)) {
+    hit <- unique(data[[unit]][as.character(data[[name_col]]) == as.character(treat)])
+    hit <- hit[!is.na(hit)]
+    if (length(hit) == 1L) {
+      return(hit[[1L]])
+    }
+  }
+  synthaio_stop(
+    "synthaio_missing_treat",
+    "treated unit ", treat, " is not in `data`"
+  )
+}
+
+#' Named id → label map from `{unit}_name`, or NULL
+#' @noRd
+sc_spec_unit_labels <- function(data, unit) {
+  name_col <- sc_spec_name_col(unit)
+  if (!name_col %in% names(data)) {
+    return(NULL)
+  }
+  ids <- data[[unit]]
+  labs <- as.character(data[[name_col]])
+  keep <- !duplicated(ids) & !is.na(ids)
+  stats::setNames(labs[keep], as.character(ids[keep]))
+}
+
+#' Format unit ids as "California (3)" when labels exist
+#' @noRd
+sc_format_unit <- function(spec, ids) {
+  ids_chr <- as.character(ids)
+  labels <- spec$unit_labels
+  if (is.null(labels) || !length(labels)) {
+    return(ids_chr)
+  }
+  lab <- unname(labels[ids_chr])
+  ifelse(
+    is.na(lab) | !nzchar(lab) | lab == ids_chr,
+    ids_chr,
+    paste0(lab, " (", ids_chr, ")")
+  )
+}
+
 #' Coerce a `unit` / `time` argument to a column name
 #' @noRd
 sc_spec_colname <- function(expr) {
@@ -199,13 +255,9 @@ sc_spec <- function(formula,
          call. = FALSE)
   }
 
+  treat <- sc_spec_resolve_treat(treat, data, unit)
   present <- unique(data[[unit]])
-  if (!treat %in% present) {
-    synthaio_stop(
-      "synthaio_missing_treat",
-      "treated unit ", treat, " is not in `data`"
-    )
-  }
+  unit_labels <- sc_spec_unit_labels(data, unit)
   if (is.null(counit)) {
     donors <- sort(present[present != treat])
   } else {
@@ -313,6 +365,7 @@ sc_spec <- function(formula,
       mspe_times = mspe_times,
       x_times = x_times,
       outcome = outcome,
+      unit_labels = unit_labels,
       X0 = X0,
       X1 = X1,
       Y0 = Y0,

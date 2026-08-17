@@ -4,9 +4,20 @@ test_that("smoking is the 39-state Prop 99 panel", {
   expect_equal(length(unique(smoking$state)), 39L)
   expect_equal(range(as.integer(smoking$year)), c(1970L, 2000L))
   expect_true(all(
-    c("state", "year", "cigsale", "lnincome", "age15to24", "retprice", "beer")
+    c(
+      "state", "state_name", "year", "cigsale", "lnincome",
+      "age15to24", "retprice", "beer"
+    )
     %in% names(smoking)
   ))
+  expect_identical(
+    unique(smoking$state_name[smoking$state == 3L]),
+    "California"
+  )
+  expect_identical(
+    unique(smoking$state_name[smoking$state == 34L]),
+    "Utah"
+  )
 
   gold <- gold_smoking()
   states <- unique(smoking$state)

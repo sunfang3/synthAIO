@@ -5,6 +5,7 @@
 \alias{coef.scm_fit}
 \alias{v_weights}
 \alias{balance}
+\alias{sc_effects}
 \alias{effects}
 \alias{glance}
 \title{Extract pieces of an \code{scm_fit}}
@@ -14,6 +15,8 @@
 v_weights(x, ...)
 
 balance(x, ...)
+
+sc_effects(x, ...)
 
 effects(x, ...)
 

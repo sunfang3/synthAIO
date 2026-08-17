@@ -1,6 +1,6 @@
 # Gold-standard alignment for smoking nested-allopt.
-# Donor set is hard against the synth2 fixture. Individual W uses
-# max(tol$w_abs, 0.05*|w|) after smoking-synth2-achieved.json (Q1).
+# Numbers come from data-raw/synth2_smoking_allopt.log (synth2 2.1.0).
+# Individual W uses max(tol$w_abs, 0.05*|w|).
 # Do not assert pre_mspe == 3.1668 on the allopt fit.
 
 test_that("gold donor set matches synth2 nested allopt", {
