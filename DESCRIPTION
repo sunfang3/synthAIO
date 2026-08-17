@@ -1,0 +1,22 @@
+Package: synthaio
+Type: Package
+Title: Classic Synthetic Control Workflow
+Version: 0.0.0.9000
+Authors@R: person("synthAIO", "Authors", role = c("aut", "cre"),
+                  email = "devnull@example.com")
+Description: Estimates the Abadie-Diamond-Hainmueller synthetic control
+    and produces a synth2-class report: nested V-W optimization, in-space
+    and in-time placebos, leave-one-out robustness, balance tables, and
+    plots. Numerical targets are Stata synth2 on standard examples.
+License: GPL-3
+Encoding: UTF-8
+Language: en-US
+LazyData: true
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 8.1.0
+Depends: R (>= 4.2.0)
+Imports: osqp, ggplot2
+Suggests: testthat (>= 3.0.0), knitr, rmarkdown, jsonlite
+VignetteBuilder: knitr
+Config/testthat/edition: 3
+Config/roxygen2/version: 8.1.0

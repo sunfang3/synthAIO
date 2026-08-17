@@ -1,0 +1,189 @@
+---
+title: "California Proposition 99"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{California Proposition 99}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 7,
+  fig.height = 4
+)
+options(width = 88)
+```
+
+This vignette walks through the classic Abadie–Diamond–Hainmueller (2010)
+synthetic control for California's Tobacco Control Program (Proposition 99).
+A Chinese teaching version is in `vignettes/prop99-zh.Rmd`.
+
+## The idea
+
+We want the effect of Proposition 99 on California cigarette sales, but there
+is no randomized control state. Synthetic control builds a *weighted average
+of donor states* that tracks California on pre-treatment predictors, then
+reads the post-1989 gap as the treatment effect.
+
+Donor weights \(W\) are nonnegative and sum to one. Predictor weights \(V\)
+are a diagonal matrix that says how much each predictor counts in that match.
+`synthaio` estimates the same Abadie SCM as Stata `synth` / `synth2` and
+returns a synth2-class report (weights, balance, optional placebos and
+leave-one-out). It is not gsynth, not synthetic DID, and not a wrapper around
+`tidysynth`.
+
+California is unit `3` in the bundled `smoking` panel. Proposition 99 passed
+in November 1988; the usual treatment date in this specification is 1989.
+
+## Estimate
+
+The gold specification matches the smoking / `synth2, nested allopt` fixture:
+average the bare covariates over 1980–1988, and also match cigarette sales in
+1988, 1980, and 1975. `allopt = TRUE` runs multi-start nested \(V\)
+optimization.
+
+```{r fit}
+library(synthaio)
+data("smoking", package = "synthaio")
+
+fit <- scm(
+  cigsale ~ lnincome + age15to24 + retprice + beer +
+    cigsale(1988) + cigsale(1980) + cigsale(1975),
+  data = smoking, unit = "state", time = "year",
+  treat = 3, trperiod = 1989, xperiod = 1980:1988,
+  allopt = TRUE
+)
+fit
+```
+
+```{r helpers, include = FALSE}
+state_lab <- c(
+  "3" = "California",
+  "4" = "Colorado",
+  "5" = "Connecticut",
+  "19" = "Montana",
+  "21" = "Nevada",
+  "34" = "Utah"
+)
+w <- coef(fit)
+nz <- sort(w[w > 0], decreasing = TRUE)
+nz_labs <- unname(state_lab[names(nz)])
+v_ord <- sort(v_weights(fit), decreasing = TRUE)
+gap2000 <- unname(effects(fit)[["2000"]])
+```
+
+The treated unit is California (`r fit$spec$treat`), treatment starts in
+`r fit$spec$trperiod`, and the method is `r fit$method`. Pre-treatment RMSE
+is `r sprintf("%.3f", fit$rmse)` packs, \(R^2\) is
+`r sprintf("%.3f", fit$r2)`, and the post-1989 average gap (ATT) is
+`r sprintf("%.2f", fit$att)` packs per capita. In 2000 the gap is
+`r sprintf("%.1f", gap2000)` packs.
+
+## Balance and donor weights
+
+Predictor balance compares California, the synthetic, and the unweighted
+donor average. Percent bias is relative to the treated mean.
+
+```{r balance}
+balance(fit)
+```
+
+Nonzero donor weights (state ids in `smoking`; California is 3):
+
+```{r weights}
+nz <- sort(coef(fit)[coef(fit) > 0], decreasing = TRUE)
+data.frame(
+  state_id = names(nz),
+  state = unname(c(
+    "4" = "Colorado", "5" = "Connecticut", "19" = "Montana",
+    "21" = "Nevada", "34" = "Utah"
+  )[names(nz)]),
+  weight = as.numeric(nz),
+  row.names = NULL
+)
+```
+
+This fit uses `r length(nz)` donors:
+`r paste(sprintf("%s (%.3f)", nz_labs, as.numeric(nz)), collapse = ", ")`.
+That donor *set* is the same five states recovered by Stata
+`synth2, nested allopt` (Utah, Nevada, Montana, Colorado, Connecticut).
+
+Predictor weights \(V\) need not match Stata digit-for-digit. This run puts
+the most mass on `r names(v_ord)[1]` (`r sprintf("%.3f", v_ord[[1]])`) and
+`r names(v_ord)[2]` (`r sprintf("%.3f", v_ord[[2]])`). Published
+`synth2, nested allopt` replicas typically concentrate on `age15to24` and
+`cigsale(1975)` — a different local minimum of the same nested MSPE surface.
+Do not treat an exact \(V\) match as a correctness check; the locked donor
+set and RMSE / ATT tolerances live in
+`tests/testthat/test-gold-standard.R`.
+
+## Paths and gaps
+
+```{r path}
+ggplot2::autoplot(fit, type = "path")
+```
+
+```{r effect}
+ggplot2::autoplot(fit, type = "effect")
+```
+
+The path plot is California versus the synthetic; the effect plot is the
+year-by-year gap. The dashed line is 1989.
+
+## Placebos (not run here)
+
+A full in-space placebo refits the specification once for every donor as if
+it had been treated. That is 39 nested solves and is too slow for a vignette.
+The checked run is `tests/testthat/test-gold-placebo.R` (nested, not allopt).
+The code below is the API; it is not evaluated.
+
+```{r placebo, eval = FALSE}
+# In-space placebo: every donor as a fake treated unit.
+# Prefer nested (not allopt) here; see test-gold-placebo.R.
+fit_space <- scm(
+  cigsale ~ lnincome + age15to24 + retprice + beer +
+    cigsale(1988) + cigsale(1980) + cigsale(1975),
+  data = smoking, unit = "state", time = "year",
+  treat = 3, trperiod = 1989, xperiod = 1980:1988,
+  nested = TRUE,
+  placebo = list(unit = TRUE)
+)
+summary(fit_space)
+ggplot2::autoplot(fit_space, type = "gaps")
+ggplot2::autoplot(fit_space, type = "mspe")
+
+# In-time placebo: a fake treatment date before 1989.
+fit_time <- scm(
+  cigsale ~ lnincome + age15to24 + retprice + beer +
+    cigsale(1988) + cigsale(1980) + cigsale(1975),
+  data = smoking, unit = "state", time = "year",
+  treat = 3, trperiod = 1989, xperiod = 1980:1988,
+  allopt = TRUE,
+  placebo = list(period = 1985)
+)
+
+# Leave-one-out: drop each nonzero donor in turn.
+fit_loo <- scm(
+  cigsale ~ lnincome + age15to24 + retprice + beer +
+    cigsale(1988) + cigsale(1980) + cigsale(1975),
+  data = smoking, unit = "state", time = "year",
+  treat = 3, trperiod = 1989, xperiod = 1980:1988,
+  allopt = TRUE,
+  loo = TRUE
+)
+ggplot2::autoplot(fit_loo, type = "loo")
+```
+
+## References
+
+Abadie, A., Diamond, A., and Hainmueller, J. (2010). Synthetic Control
+Methods for Comparative Case Studies: Estimating the Effect of California's
+Tobacco Control Program. *Journal of the American Statistical Association*,
+105(490), 493–505.
+
+Yan, G., and Chen, Q. (2023). synth2: Synthetic control method with placebo
+tests, robustness test, and visualization. *The Stata Journal*, 23(3),
+597–624.

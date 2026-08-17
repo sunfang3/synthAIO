@@ -1,0 +1,170 @@
+---
+title: "加州99号提案"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{加州99号提案}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 7,
+  fig.height = 4
+)
+options(width = 88)
+```
+
+这篇 vignette 按连享会 / `synth2` 的教学顺序走一遍加州 99
+号提案（Proposition 99）：先讲思想，再估计，再看平衡表，安慰剂代码只展示、不在这里跑。
+英文版见 `vignettes/prop99.Rmd`。
+
+## 思想
+
+我们想知道 1988 年加州控烟提案对人均卷烟销量的影响，但找不到一个「除了没立法、其他都像加州」的对照州。合成控制的做法是：在未立法的捐赠州里找一组**非负且加总为 1** 的权重 \(W\)，让加权平均在处理前尽量贴近加州的预测变量；处理后再看加州与这个「合成加州」的缺口。
+
+预测变量的相对重要性由对角矩阵 \(V\) 给出。`synthaio` 估计的是 Abadie–Diamond–Hainmueller 经典合成控制，并给出与 Stata `synth2` 同构的报告（权重、平衡表、可选的安慰剂与 leave-one-out）。它**不是** gsynth，也**不是**合成 DID。
+
+捆绑数据 `smoking` 里，加州的单位编号是 `3`。提案于 1988 年 11 月通过，这套规格把处理时点记为 1989。
+
+## 估计
+
+金标准规格与 `synth2, nested allopt` 夹具一致：协变量在 1980–1988 年取平均，并单独匹配 1988、1980、1975 三年的销量。`allopt = TRUE` 做多起点嵌套优化。
+
+```{r fit}
+library(synthaio)
+data("smoking", package = "synthaio")
+
+fit <- scm(
+  cigsale ~ lnincome + age15to24 + retprice + beer +
+    cigsale(1988) + cigsale(1980) + cigsale(1975),
+  data = smoking, unit = "state", time = "year",
+  treat = 3, trperiod = 1989, xperiod = 1980:1988,
+  allopt = TRUE
+)
+fit
+```
+
+```{r helpers, include = FALSE}
+state_lab <- c(
+  "3" = "加州",
+  "4" = "科罗拉多",
+  "5" = "康涅狄格",
+  "19" = "蒙大拿",
+  "21" = "内华达",
+  "34" = "犹他"
+)
+w <- coef(fit)
+nz <- sort(w[w > 0], decreasing = TRUE)
+nz_labs <- unname(state_lab[names(nz)])
+v_ord <- sort(v_weights(fit), decreasing = TRUE)
+gap2000 <- unname(effects(fit)[["2000"]])
+```
+
+处理单位是加州（`r fit$spec$treat`），处理时点是 `r fit$spec$trperiod`，方法是
+`r fit$method`。处理前 RMSE 为 `r sprintf("%.3f", fit$rmse)` 包，\(R^2\) 为
+`r sprintf("%.3f", fit$r2)`，1989 年及以后的平均缺口（ATT）为
+`r sprintf("%.2f", fit$att)` 包/人。2000 年的缺口是
+`r sprintf("%.1f", gap2000)` 包。
+
+## 平衡表
+
+平衡表比较加州、合成控制、以及捐赠池的简单平均。百分偏误相对处理组均值计算。
+
+```{r balance}
+balance(fit)
+```
+
+非零捐赠权重（`smoking` 里的州编号；加州是 3）：
+
+```{r weights}
+nz <- sort(coef(fit)[coef(fit) > 0], decreasing = TRUE)
+data.frame(
+  state_id = names(nz),
+  state = unname(c(
+    "4" = "科罗拉多", "5" = "康涅狄格", "19" = "蒙大拿",
+    "21" = "内华达", "34" = "犹他"
+  )[names(nz)]),
+  weight = as.numeric(nz),
+  row.names = NULL
+)
+```
+
+本次估计用了 `r length(nz)` 个捐赠州：
+`r paste(sprintf("%s (%.3f)", nz_labs, as.numeric(nz)), collapse = "，")`。
+这个**捐赠集合**与 Stata `synth2, nested allopt` 一致（犹他、内华达、蒙大拿、科罗拉多、康涅狄格）。
+
+\(V\) 权重不必和 Stata 逐位相同。这次拟合最大的两项是
+`r names(v_ord)[1]`（`r sprintf("%.3f", v_ord[[1]])`）和
+`r names(v_ord)[2]`（`r sprintf("%.3f", v_ord[[2]])`）。已发表的
+`synth2, nested allopt` 复现通常把质量集中在 `age15to24` 与
+`cigsale(1975)`——同一嵌套 MSPE 曲面上的另一个局部最小。不要把 \(V\)
+是否逐位重合当成对错标准；锁定的捐赠集合以及 RMSE / ATT 容差见
+`tests/testthat/test-gold-standard.R`。
+
+## 路径图与效应图
+
+```{r path}
+ggplot2::autoplot(fit, type = "path")
+```
+
+```{r effect}
+ggplot2::autoplot(fit, type = "effect")
+```
+
+路径图是加州对合成加州；效应图是逐年缺口。竖虚线是 1989 年。
+
+## 安慰剂（此处不执行）
+
+空间安慰剂把每一个捐赠州轮流当成处理单位再估一遍，相当于 39 次嵌套优化，不适合放进 vignette。已核对的运行在
+`tests/testthat/test-gold-placebo.R`（用 `nested`，不用 `allopt`）。下面只给出接口，不求值。
+
+```{r placebo, eval = FALSE}
+# 空间安慰剂：每个捐赠州当作假处理单位。
+# 这里用 nested 而不是 allopt；见 test-gold-placebo.R。
+fit_space <- scm(
+  cigsale ~ lnincome + age15to24 + retprice + beer +
+    cigsale(1988) + cigsale(1980) + cigsale(1975),
+  data = smoking, unit = "state", time = "year",
+  treat = 3, trperiod = 1989, xperiod = 1980:1988,
+  nested = TRUE,
+  placebo = list(unit = TRUE)
+)
+summary(fit_space)
+ggplot2::autoplot(fit_space, type = "gaps")
+ggplot2::autoplot(fit_space, type = "mspe")
+
+# 时间安慰剂：在 1989 年之前选一个假处理时点。
+fit_time <- scm(
+  cigsale ~ lnincome + age15to24 + retprice + beer +
+    cigsale(1988) + cigsale(1980) + cigsale(1975),
+  data = smoking, unit = "state", time = "year",
+  treat = 3, trperiod = 1989, xperiod = 1980:1988,
+  allopt = TRUE,
+  placebo = list(period = 1985)
+)
+
+# Leave-one-out：每次去掉一个非零权重捐赠州。
+fit_loo <- scm(
+  cigsale ~ lnincome + age15to24 + retprice + beer +
+    cigsale(1988) + cigsale(1980) + cigsale(1975),
+  data = smoking, unit = "state", time = "year",
+  treat = 3, trperiod = 1989, xperiod = 1980:1988,
+  allopt = TRUE,
+  loo = TRUE
+)
+ggplot2::autoplot(fit_loo, type = "loo")
+```
+
+## 文献
+
+Abadie, A., Diamond, A., and Hainmueller, J. (2010). Synthetic Control
+Methods for Comparative Case Studies: Estimating the Effect of California's
+Tobacco Control Program. *Journal of the American Statistical Association*,
+105(490), 493–505.
+
+Yan, G., and Chen, Q. (2023). synth2: Synthetic control method with placebo
+tests, robustness test, and visualization. *The Stata Journal*, 23(3),
+597–624.

@@ -1,0 +1,44 @@
+{
+  "_source": "synthaio allopt on this machine (ipop inner + NM/BFGS abs-norm V); Stata log still missing (Q1)",
+  "_spec": "cigsale ~ lnincome + age15to24 + retprice + beer + cigsale(1988)+cigsale(1980)+cigsale(1975); trunit=California; trperiod=1989; xperiod=1980:1988; nested allopt",
+  "treat_name": "California",
+  "treat_id": 3,
+  "unit_ids": {
+    "Utah": 34,
+    "Nevada": 21,
+    "Montana": 19,
+    "Colorado": 4,
+    "Connecticut": 5
+  },
+  "rmse": 1.76005992718081,
+  "r2": 0.976043412522826,
+  "att": -18.9588259281583,
+  "v": {
+    "lnincome": 0.000294973050002096,
+    "age15to24": 0.032108023471596,
+    "retprice": 0.0375758889437334,
+    "beer": 0.0186979602475977,
+    "cigsale_1988": 0.0303434747424871,
+    "cigsale_1980": 0.0542504993316588,
+    "cigsale_1975": 0.826729180212925
+  },
+  "w_nonzero": {
+    "Utah": 0.335168911174233,
+    "Nevada": 0.234515137126062,
+    "Montana": 0.203108262899491,
+    "Colorado": 0.160878479430224,
+    "Connecticut": 0.0663129773106433
+  },
+  "effect": {
+    "1989": -7.51049731042923,
+    "1990": -9.62978514582895,
+    "1993": -17.7552008048072,
+    "1997": -23.8941818411177,
+    "1999": -26.3310514891567,
+    "2000": -25.712611744982
+  },
+  "pre_mspe": 3.09781094726773,
+  "post_mspe": 396.412681372487,
+  "v_top2": ["cigsale_1975", "cigsale_1980"],
+  "gold_v_top2": ["age15to24", "cigsale_1975"]
+}
